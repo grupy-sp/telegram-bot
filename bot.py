@@ -1,89 +1,102 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 """Bot do Grupy-SP."""
-import requests
-import json
+
+
+from __future__ import print_function
+
+import os
+import sys
 import logging
+import logging.config
 from locale import setlocale, LC_ALL
-from decouple import config
-from datetime import datetime
+
+from dotenv import load_dotenv
 from telegram.ext import Updater, CommandHandler
 
-logging.basicConfig(filename='bot.log', filemode='w', level=logging.INFO)
+from events import get_events
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO)
+# check python version
+if sys.version_info.major != 3 or sys.version_info.minor < 6:
+    print('Esse programa so funciona com python 3.6 ou mais recente')
+    sys.exit()
 
-telegram_token = config('TELEGRAM_TOKEN')
-meetup_key = config('MEETUP_KEY')
-meetup_group = config('MEETUP_GROUP')
+# config stuff
+logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
+logger = logging.getLogger(__name__)
+
+load_dotenv()
 
 setlocale(LC_ALL, 'pt_BR.UTF-8')
 
 
-def start(bot, update):
+def start(update, context):
+    """Echo some info"""
+
     user_username = update.message.from_user['username']
     user_id = update.message.from_user['id']
     user_name = update.message.from_user['first_name']
-    logging.info(f'Usuário: {user_id} {user_username} - /start')
+    logger.info(f'Usuário: {user_id} {user_username} - /start')
     update.message.reply_text(f'Olá, {user_name}!')
 
 
-def eventos(bot, update, q=5):
-    global meetup_key, meetup_group
+def eventos(update, context, q=5):
+    """Get the events on meetup website and send on chat"""
 
     user_username = update.message.from_user['username']
     user_id = update.message.from_user['id']
     if q == 1:
-        logging.info(f'Usuário: {user_id} {user_username} - /evento')
+        logger.info(f'Usuário: {user_id} {user_username} - /evento')
     else:
-        logging.info(f'Usuário: {user_id} {user_username} - /eventos')
+        logger.info(f'Usuário: {user_id} {user_username} - /eventos')
 
-    url = f'https://api.meetup.com/{meetup_group}/events'
-    params = {
-        'key': meetup_key,
-        'status': 'upcoming',
-        'only': 'name,time,venue,link,time',
-        'page': q
-    }
-    r = requests.get(url, params)
-    qtd = len(json.loads(r.text))
+    events = get_events()
+    qtd = len(events)
+
     if qtd == 0:
         update.message.reply_text('Não há nenhum evento registrado no Meetup!')
     else:
+        update.message.reply_text('Próximos eventos:\n')
         for i in range(qtd):
-            event = json.loads(r.text)[i]
-            venue = event['venue']
+            event = events[i]
 
-            location = venue['name']
-            address = f'{venue["address_1"]} - {venue["city"]}'
-            lat = venue['lat']
-            lon = venue['lon']
-            title = event['name']
-            link = event['link']
-            time = datetime.fromtimestamp(
-                event['time'] // 1000).strftime('Dia %d de %B de %Y, às %H:%M')
+            msg = ((
+                f"[{event['title']}]({event['url']})",
+                event['date'].strftime('Dia %d de %B de %Y, às %H:%M'),
+                '\n',
+            ))
 
             update.message.reply_text(
-                f'[{title}]({link})\n{time}\n\n#evento #Meetup',
-                disable_web_page_preview=True,
-                parse_mode='Markdown')
+                '\n'.join(msg),
+                disable_web_page_preview=False,
+                parse_mode='Markdown',
+            )
+
+            """
+            This snipet would be used to send the location
+            However I couldn't get the location on the events listing page
+            One ideia is to get the individual event page
 
             update.message.reply_venue(
-                latitude=lat, longitude=lon, title=location, address=address)
+                latitude=lat, longitude=lon, title=location, address=address
+            )
+            """
+        update.message.reply_text('#evento #Meetup')
 
 
 def evento(bot, update):
     eventos(bot, update, 1)
 
 
-updater = Updater(telegram_token)
+if __name__ == '__main__':
+    # instantiate the telegram bot inner works
+    updater = Updater(os.environ['TELEGRAM_TOKEN'], use_context=True)
 
-updater.dispatcher.add_handler(CommandHandler('start', start))
-updater.dispatcher.add_handler(CommandHandler('eventos', eventos))
-updater.dispatcher.add_handler(CommandHandler('evento', evento))
+    # add functions that can be called from telegram chat
+    updater.dispatcher.add_handler(CommandHandler('start', start))
+    updater.dispatcher.add_handler(CommandHandler('eventos', eventos))
+    updater.dispatcher.add_handler(CommandHandler('evento', evento))
 
-updater.start_polling()
-updater.idle()
+    # start loop that listen to chat
+    updater.start_polling()
+    updater.idle()

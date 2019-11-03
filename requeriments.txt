@@ -1,4 +1,0 @@
-python-telegram-bot
-requests
-python-decouple
-feedparser
