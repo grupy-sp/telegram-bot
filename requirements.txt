@@ -4,7 +4,7 @@ bs4==0.0.1
 certifi==2019.9.11
 cffi==1.13.2
 chardet==3.0.4
-cryptography==2.8
+cryptography==3.2
 cssselect==1.1.0
 fake-useragent==0.1.11
 future==0.18.2
