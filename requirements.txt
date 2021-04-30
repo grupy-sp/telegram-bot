@@ -23,6 +23,6 @@ six==1.12.0
 soupsieve==1.9.5
 tornado==6.0.3
 tqdm==4.37.0
-urllib3==1.25.6
+urllib3==1.25.8
 w3lib==1.21.0
 websockets==8.1
