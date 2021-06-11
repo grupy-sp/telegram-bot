@@ -25,4 +25,4 @@ tornado==6.0.3
 tqdm==4.37.0
 urllib3==1.25.6
 w3lib==1.21.0
-websockets==8.1
+websockets==9.1
