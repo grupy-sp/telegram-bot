@@ -9,7 +9,7 @@ cssselect==1.1.0
 fake-useragent==0.1.11
 future==0.18.2
 idna==2.8
-lxml==4.6.3
+lxml==4.6.5
 parse==1.12.1
 pycparser==2.19
 pyee==6.0.0
